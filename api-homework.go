@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -79,18 +80,21 @@ func main() {
 	}
 
 	router.POST("/getCity", func(c *gin.Context) {
-		var json Struct2
+		var variable Struct2
 
-		if err = c.ShouldBindJSON(&json); err == nil {
+		if err = c.ShouldBindJSON(&variable); err == nil {
 
-			rows, err := db.Query("SELECT name from city where countrycode=?", json.Word2)
+			rows, err := db.Query("SELECT name from city where countrycode=?", variable.Word2)
 
 			if err != nil {
 
 				panic(err)
 			}
 			defer rows.Close()
+
 			var cName string
+			var swap MCity
+			var outlist CityList
 			for rows.Next() {
 
 				err = rows.Scan(&cName)
@@ -99,12 +103,23 @@ func main() {
 
 					panic(err)
 				}
+				swap.Name = cName
+				outlist.List = append(outlist.List, swap)
 
-				c.JSON(http.StatusOK, gin.H{"City": cName})
 			}
-
+			resp, err := json.Marshal(outlist)
+			c.Data(http.StatusOK, "application/json", resp)
 		}
 	})
 
 	router.Run(":3000")
+
+}
+
+type CityList struct {
+	List []MCity `json:"list,omitempty"`
+}
+
+type MCity struct {
+	Name string `json:"city,omitempty"`
 }
